@@ -63,7 +63,9 @@ def api_load_scene(name: str) -> dict:
     path = _scene_path(name)
     if not path.exists():
         raise HTTPException(status_code=404, detail="场景不存在")
-    return json.loads(path.read_text(encoding="utf-8"))
+    # 用 SceneSpec 规范化，补齐手写场景文件中省略的默认字段（如 kwargs/args/methods）
+    scene = SceneSpec.model_validate(json.loads(path.read_text(encoding="utf-8")))
+    return json.loads(scene.model_dump_json())
 
 
 @app.delete("/api/scenes/{name}")

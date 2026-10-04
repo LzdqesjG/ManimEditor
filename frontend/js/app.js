@@ -77,6 +77,16 @@ function showVideo(url) {
   document.getElementById('stage-hint').textContent = '双击视频可返回画布';
 }
 
+// 隐藏并释放视频，让画布重新可见（切换场景 / 新建 / 双击返回画布时调用）
+function resetVideo() {
+  const video = document.getElementById('video');
+  video.pause();
+  video.hidden = true;
+  video.removeAttribute('src');
+  video.load();
+  document.getElementById('stage-hint').textContent = '点击左侧图形添加对象';
+}
+
 function bindTabs() {
   document.querySelectorAll('.tab').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -124,10 +134,8 @@ function bindToolbar() {
 
   const video = document.getElementById('video');
   video.addEventListener('dblclick', () => {
-    video.hidden = true;
-    video.pause();
+    resetVideo();
     renderCanvas();
-    document.getElementById('stage-hint').textContent = '点击左侧图形添加对象';
   });
 }
 
@@ -160,6 +168,7 @@ async function saveSceneToServer() {
 }
 
 function newScene() {
+  resetVideo();
   state.scene = makeEmptyScene();
   state.selection = null;
   syncToolbar();
@@ -174,6 +183,7 @@ async function onSceneSelected(e) {
     state.scene = normalizeScene(raw);
     state.selection = null;
     e.target.value = '';
+    resetVideo();
     syncToolbar();
     emit();
     showToast(`已打开 ${name}`);

@@ -33,14 +33,16 @@ function layoutCanvas() {
 }
 
 function objColor(spec) {
-  return spec.kwargs.fill_color || spec.kwargs.stroke_color || spec.kwargs.color || '#4c8dff';
+  const kw = spec.kwargs || {};
+  return kw.fill_color || kw.stroke_color || kw.color || '#4c8dff';
 }
 
 function numKw(spec, names, fallback) {
+  const kw = spec.kwargs || {};
   for (const n of names) {
-    if (typeof spec.kwargs[n] === 'number') return spec.kwargs[n];
+    if (typeof kw[n] === 'number') return kw[n];
   }
-  for (const a of spec.args) if (typeof a === 'number') return a;
+  for (const a of spec.args || []) if (typeof a === 'number') return a;
   return fallback;
 }
 

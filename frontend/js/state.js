@@ -14,14 +14,33 @@ function makeEmptyScene() {
 
 // 补齐缺失字段，保证旧场景文件 / 本地草稿也能安全打开
 function normalizeScene(raw) {
-  const base = makeEmptyScene();
-  const scene = Object.assign(base, raw || {});
-  scene.config = Object.assign(base.config, (raw && raw.config) || {});
-  scene.mobjects = scene.mobjects || [];
-  scene.animations = scene.animations || [];
-  scene.setup_code = scene.setup_code || '';
-  scene.frame_code = scene.frame_code || '';
-  scene.raw_code = scene.raw_code || '';
+  const src = raw || {};
+  const scene = makeEmptyScene();
+  scene.name = src.name || scene.name;
+  // 以默认 config 为底再覆盖，避免手写文件里缺字段导致默认值丢失
+  scene.config = Object.assign(scene.config, src.config || {});
+  // 逐个补齐字段，容忍手写场景文件里省略的默认值
+  scene.mobjects = (src.mobjects || []).map((m) => ({
+    id: m.id,
+    type: m.type,
+    args: m.args || [],
+    kwargs: m.kwargs || {},
+    methods: m.methods || [],
+    label: m.label ?? null,
+    visible_at_start: m.visible_at_start ?? null,
+  }));
+  scene.animations = (src.animations || []).map((a) => ({
+    id: a.id,
+    type: a.type,
+    targets: a.targets || [],
+    args: a.args || [],
+    kwargs: a.kwargs || {},
+    start: a.start ?? 0,
+    run_time: a.run_time ?? null,
+  }));
+  scene.setup_code = src.setup_code || '';
+  scene.frame_code = src.frame_code || '';
+  scene.raw_code = src.raw_code || '';
   return scene;
 }
 
