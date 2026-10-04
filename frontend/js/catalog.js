@@ -19,7 +19,7 @@ function renderLibrary() {
   });
 
   if (!items.length) {
-    box.innerHTML = '<div class="empty">无匹配结果</div>';
+    box.innerHTML = `<div class="empty">${t('noResults')}</div>`;
     return;
   }
   box.innerHTML = items.map((it) => {

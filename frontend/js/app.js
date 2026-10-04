@@ -49,18 +49,18 @@ async function updateCode() {
     const result = await API.codegen(state.scene);
     document.getElementById('code-view').textContent = result.code;
   } catch (err) {
-    showToast(`代码生成失败：${err.message}`, true);
+    showToast(t('codegenFailed') + err.message, true);
   }
 }
 
 let _toastTimer = null;
 function showToast(message, isError) {
-  const t = document.getElementById('toast');
-  t.textContent = message;
-  t.hidden = false;
-  t.classList.toggle('err', !!isError);
+  const toastEl = document.getElementById('toast');
+  toastEl.textContent = message;
+  toastEl.hidden = false;
+  toastEl.classList.toggle('err', !!isError);
   clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => { t.hidden = true; }, 4500);
+  _toastTimer = setTimeout(() => { toastEl.hidden = true; }, 4500);
 }
 
 function setStatus(text, cls) {
@@ -74,7 +74,7 @@ function showVideo(url) {
   video.src = `${url}?t=${Date.now()}`;
   video.hidden = false;
   video.play().catch(() => {});
-  document.getElementById('stage-hint').textContent = '双击视频可返回画布';
+  document.getElementById('stage-hint').textContent = t('stageHintVideo');
 }
 
 // 隐藏并释放视频，让画布重新可见（切换场景 / 新建 / 双击返回画布时调用）
@@ -84,7 +84,7 @@ function resetVideo() {
   video.hidden = true;
   video.removeAttribute('src');
   video.load();
-  document.getElementById('stage-hint').textContent = '点击左侧图形添加对象';
+  document.getElementById('stage-hint').textContent = t('stageHintAdd');
 }
 
 function bindTabs() {
@@ -128,6 +128,7 @@ function bindToolbar() {
   });
   document.getElementById('btn-render').addEventListener('click', doRender);
   document.getElementById('btn-refresh-code').addEventListener('click', updateCode);
+  document.getElementById('btn-lang').addEventListener('click', toggleLanguage);
   document.getElementById('btn-save').addEventListener('click', saveSceneToServer);
   document.getElementById('btn-new').addEventListener('click', newScene);
   document.getElementById('scene-list').addEventListener('change', onSceneSelected);
@@ -137,6 +138,16 @@ function bindToolbar() {
     resetVideo();
     renderCanvas();
   });
+}
+
+async function toggleLanguage() {
+  const next = currentLang === 'en' ? 'zh' : 'en';
+  setLanguage(next);
+  emit();
+  refreshSceneList();
+  try {
+    await API.saveConfig({ language: next });
+  } catch (err) { /* 写入失败则仅本次会话生效 */ }
 }
 
 function syncToolbar() {
@@ -150,7 +161,7 @@ async function refreshSceneList() {
   try {
     const items = await API.scenes();
     const current = sel.value;
-    sel.innerHTML = '<option value="">打开场景…</option>'
+    sel.innerHTML = `<option value="">${t('openScene')}</option>`
       + items.map((i) => `<option value="${i.name}">${i.name}</option>`).join('');
     sel.value = current;
   } catch (err) { /* 列表拉取失败不影响编辑 */ }
@@ -160,10 +171,10 @@ async function saveSceneToServer() {
   const name = state.scene.name || 'MyScene';
   try {
     const result = await API.saveScene(name, state.scene);
-    showToast(`已保存 scenes/${result.name}.json`);
+    showToast(t('savedScene', { name: result.name }));
     await refreshSceneList();
   } catch (err) {
-    showToast(`保存失败：${err.message}`, true);
+    showToast(t('saveFailed') + err.message, true);
   }
 }
 
@@ -186,23 +197,23 @@ async function onSceneSelected(e) {
     resetVideo();
     syncToolbar();
     emit();
-    showToast(`已打开 ${name}`);
+    showToast(t('openedScene', { name }));
   } catch (err) {
-    showToast(`打开失败：${err.message}`, true);
+    showToast(t('openFailed') + err.message, true);
   }
 }
 
 async function doRender() {
   const btn = document.getElementById('btn-render');
   btn.disabled = true;
-  setStatus('提交渲染任务…');
+  setStatus(t('submitting'));
   try {
     const task = await API.render(state.scene);
     pollRender(task.id, btn);
   } catch (err) {
     btn.disabled = false;
-    setStatus('提交失败', 'err');
-    showToast(`提交失败：${err.message}`, true);
+    setStatus(t('submitFailed'), 'err');
+    showToast(t('submitFailedDetail') + err.message, true);
   }
 }
 
@@ -211,23 +222,23 @@ async function pollRender(taskId, btn) {
     const task = await API.task(taskId);
     if (task.status === 'done') {
       btn.disabled = false;
-      setStatus(`渲染完成 · ${task.elapsed}s`, 'ok');
+      setStatus(`${t('renderDone')} · ${task.elapsed}s`, 'ok');
       showVideo(task.video_url);
       return;
     }
     if (task.status === 'error') {
       btn.disabled = false;
-      setStatus('渲染失败', 'err');
-      showToast(`渲染失败：${task.error}`, true);
-      console.error('manim 日志：\n' + task.log);
+      setStatus(t('renderFailed'), 'err');
+      showToast(t('renderFailedDetail') + task.error, true);
+      console.error('manim log:\n' + task.log);
       return;
     }
-    setStatus(`渲染中… ${task.elapsed}s`);
+    setStatus(`${t('rendering')} ${task.elapsed}s`);
     setTimeout(() => pollRender(taskId, btn), 800);
   } catch (err) {
     btn.disabled = false;
-    setStatus('轮询失败', 'err');
-    showToast(`轮询失败：${err.message}`, true);
+    setStatus(t('pollFailed'), 'err');
+    showToast(t('pollFailedDetail') + err.message, true);
   }
 }
 
@@ -236,6 +247,16 @@ async function init() {
   bindTabs();
   bindLibrary();
   bindCanvas();
+
+  // 语言：读取 config.json；读取失败时回退英文
+  let lang = 'en';
+  try {
+    const config = await API.getConfig();
+    if (config && config.language === 'zh') lang = 'zh';
+  } catch (err) {
+    lang = 'en';
+  }
+  setLanguage(lang);
 
   const draft = loadDraft();
   if (draft) {
@@ -246,7 +267,7 @@ async function init() {
   try {
     state.catalog = await API.catalog();
   } catch (err) {
-    showToast(`无法加载 manim 对象清单：${err.message}`, true);
+    showToast(t('catalogFailed') + err.message, true);
   }
   renderLibrary();
   emit();

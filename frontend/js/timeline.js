@@ -35,7 +35,7 @@ function renderTimeline() {
   if (!state.scene.animations.length) {
     const empty = document.createElement('div');
     empty.className = 'empty';
-    empty.textContent = '时间轴为空：选中对象后，点击左下角"动画"标签里的项目即可添加';
+    empty.textContent = t('timelineEmpty');
     inner.appendChild(empty);
     box.appendChild(inner);
     updateTimelineInfo();
@@ -49,7 +49,7 @@ function renderTimeline() {
 
     const label = document.createElement('span');
     label.className = 'tl-row-label';
-    label.textContent = `${a.type} → ${a.targets.join(', ') || '(未选对象)'}`;
+    label.textContent = `${a.type} → ${a.targets.join(', ') || t('noTarget')}`;
     row.appendChild(label);
 
     const dur = a.run_time == null ? 1 : a.run_time;
@@ -100,5 +100,5 @@ function bindBlockDrag(block, anim) {
 
 function updateTimelineInfo() {
   const el = document.getElementById('timeline-info');
-  if (el) el.textContent = `共 ${state.scene.animations.length} 个动画 · 总时长约 ${timelineEnd().toFixed(2)}s`;
+  if (el) el.textContent = t('timelineInfo', { count: state.scene.animations.length, total: timelineEnd().toFixed(2) });
 }

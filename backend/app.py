@@ -11,11 +11,14 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import codegen, manim_api, renderer
-from .schema import SceneSpec
+from .schema import AppConfig, SceneSpec
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 SCENES_DIR = BASE_DIR / "scenes"
+CONFIG_FILE = BASE_DIR / "config.json"
+
+SUPPORTED_LANGUAGES = ("en", "zh")
 
 app = FastAPI(title="ManimEditor", version="0.1.0")
 
@@ -32,6 +35,29 @@ def api_catalog() -> dict:
     data = manim_api.build_catalog()
     data["priority"] = manim_api.PRIORITY_NAMES
     return data
+
+
+@app.get("/api/config")
+def api_get_config() -> dict:
+    """读取 config.json 中的应用配置；文件缺失或读取失败时回退为默认（英文）。"""
+    try:
+        data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+        if isinstance(data, dict) and data.get("language") in SUPPORTED_LANGUAGES:
+            return {"language": data["language"]}
+    except Exception:
+        pass
+    return {"language": "en"}
+
+
+@app.post("/api/config")
+def api_set_config(payload: AppConfig) -> dict:
+    """把应用配置写入 config.json。"""
+    language = payload.language if payload.language in SUPPORTED_LANGUAGES else "en"
+    CONFIG_FILE.write_text(
+        json.dumps({"language": language}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return {"language": language}
 
 
 @app.get("/manifest.json")

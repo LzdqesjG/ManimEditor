@@ -78,3 +78,9 @@ class SceneSpec(BaseModel):
     # 逃生舱：可视化覆盖不到的效果（3D / LaTeX / 自定义 update）直接手写代码，
     # 原样插入 construct 末尾。
     raw_code: str = ""
+
+
+class AppConfig(BaseModel):
+    """应用级配置（持久化到 config.json）。"""
+
+    language: str = "en"

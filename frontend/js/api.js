@@ -23,4 +23,6 @@ const API = {
   scenes: () => httpGet('/api/scenes'),
   saveScene: (name, scene) => httpPost('/api/scenes/' + encodeURIComponent(name), scene),
   loadScene: (name) => httpGet('/api/scenes/' + encodeURIComponent(name)),
+  getConfig: () => httpGet('/api/config'),
+  saveConfig: (config) => httpPost('/api/config', config),
 };

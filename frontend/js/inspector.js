@@ -28,7 +28,7 @@ function mobjectSelect(value, onChange) {
   const sel = document.createElement('select');
   const none = document.createElement('option');
   none.value = '';
-  none.textContent = '（未指定）';
+  none.textContent = t('none');
   sel.appendChild(none);
   for (const m of state.scene.mobjects) {
     const o = document.createElement('option');
@@ -99,9 +99,9 @@ function title(text) {
 
 function triSelect(value, onChange) {
   const sel = document.createElement('select');
-  [['', '自动判断'], ['true', '开始时即显示'], ['false', '不预先显示']].forEach(([v, t]) => {
+  [['', 'visibleAuto'], ['true', 'visibleTrue'], ['false', 'visibleFalse']].forEach(([v, key]) => {
     const o = document.createElement('option');
-    o.value = v; o.textContent = t; sel.appendChild(o);
+    o.value = v; o.textContent = t(key); sel.appendChild(o);
   });
   sel.value = value === true ? 'true' : value === false ? 'false' : '';
   sel.addEventListener('change', () => onChange(sel.value === '' ? null : sel.value === 'true'));
@@ -137,7 +137,7 @@ function renderParams(box, meta, spec, setValue, removeValue, opts = {}) {
     const del = document.createElement('button');
     del.className = 'ghost';
     del.textContent = '×';
-    del.title = '移除该参数';
+    del.title = t('removeParam');
     del.addEventListener('click', () => { removeValue(name); emit(); });
     row.appendChild(del);
     box.appendChild(fieldWrap(name, row));
@@ -152,7 +152,7 @@ function renderParams(box, meta, spec, setValue, removeValue, opts = {}) {
   if (candidates.length) {
     const sel = document.createElement('select');
     const head = document.createElement('option');
-    head.value = ''; head.textContent = '+ 添加参数…';
+    head.value = ''; head.textContent = t('addParam');
     sel.appendChild(head);
     for (const p of candidates) {
       const o = document.createElement('option');
@@ -178,9 +178,9 @@ function renderMobjectProps(box, spec) {
   row.className = 'row';
   row.appendChild(numInput(pos.x, (v) => { const p = mobPosition(spec); setMobPosition(spec, v, p.y); emitVisuals(); }));
   row.appendChild(numInput(pos.y, (v) => { const p = mobPosition(spec); setMobPosition(spec, p.x, v); emitVisuals(); }));
-  box.appendChild(fieldWrap('位置 (x, y)', row));
+  box.appendChild(fieldWrap(t('positionXY'), row));
 
-  box.appendChild(fieldWrap('起始可见性', triSelect(spec.visible_at_start, (v) => { spec.visible_at_start = v; emitVisuals(); })));
+  box.appendChild(fieldWrap(t('visibleAtStart'), triSelect(spec.visible_at_start, (v) => { spec.visible_at_start = v; emitVisuals(); })));
 
   const meta = findMeta('mobjects', spec.type);
   renderParams(box, meta, spec,
@@ -195,7 +195,7 @@ function renderMobjectProps(box, spec) {
   row2.className = 'btn-row';
   const del = document.createElement('button');
   del.className = 'danger';
-  del.textContent = '删除对象';
+  del.textContent = t('deleteObject');
   del.addEventListener('click', () => { removeMobject(spec.id); emit(); });
   row2.appendChild(del);
   box.appendChild(row2);
@@ -207,12 +207,12 @@ function renderAnimationProps(box, anim) {
   const targets = document.createElement('div');
   targets.className = 'field';
   const tl = document.createElement('label');
-  tl.textContent = '作用对象';
+  tl.textContent = t('targetsLabel');
   targets.appendChild(tl);
   if (!state.scene.mobjects.length) {
     const e = document.createElement('div');
     e.className = 'empty';
-    e.textContent = '场景中还没有对象';
+    e.textContent = t('noObjects');
     targets.appendChild(e);
   } else {
     for (const m of state.scene.mobjects) {
@@ -249,7 +249,7 @@ function renderAnimationProps(box, anim) {
     emitVisuals();
   });
   row.appendChild(rt);
-  box.appendChild(fieldWrap('起始时间 / 时长（秒）', row));
+  box.appendChild(fieldWrap(t('timingLabel'), row));
 
   const meta = findMeta('animations', anim.type);
   renderParams(box, meta, anim,
@@ -265,7 +265,7 @@ function renderAnimationProps(box, anim) {
   row2.className = 'btn-row';
   const del = document.createElement('button');
   del.className = 'danger';
-  del.textContent = '删除动画';
+  del.textContent = t('deleteAnimation');
   del.addEventListener('click', () => { removeAnimation(anim.id); emit(); });
   row2.appendChild(del);
   box.appendChild(row2);
@@ -276,7 +276,7 @@ function renderInspector() {
   box.innerHTML = '';
   const item = selectedItem();
   if (!item) {
-    box.innerHTML = '<div class="empty">未选中任何对象<br>点击左侧图形添加，或点击画布/时间轴选中</div>';
+    box.innerHTML = `<div class="empty">${t('noSelection')}</div>`;
     return;
   }
   if (state.selection.kind === 'mobject') renderMobjectProps(box, item);
