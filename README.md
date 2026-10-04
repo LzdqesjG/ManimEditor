@@ -109,7 +109,8 @@ ManimEditor/
 ├── frontend/
 │   ├── index.html
 │   ├── css/style.css
-│   └── js/                 # api / state / catalog / inspector / canvas / timeline / app
+│   ├── js/                 # i18n / api / state / catalog / inspector / canvas / timeline / app
+│   └── lang/               # 语言包：en_us.json / zh_cn.json
 ├── scenes/                 # 保存的场景文件（含 Default.json 示例）
 └── workspace/              # 渲染产物（自动生成）
 ```

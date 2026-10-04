@@ -18,7 +18,9 @@ FRONTEND_DIR = BASE_DIR / "frontend"
 SCENES_DIR = BASE_DIR / "scenes"
 CONFIG_FILE = BASE_DIR / "config.json"
 
-SUPPORTED_LANGUAGES = ("en", "zh")
+# 支持的语言代码，与 frontend/lang/<code>.json 一一对应
+SUPPORTED_LANGUAGES = ("en_us", "zh_cn")
+DEFAULT_LANGUAGE = "en_us"
 
 app = FastAPI(title="ManimEditor", version="0.1.0")
 
@@ -39,20 +41,20 @@ def api_catalog() -> dict:
 
 @app.get("/api/config")
 def api_get_config() -> dict:
-    """读取 config.json 中的应用配置；文件缺失或读取失败时回退为默认（英文）。"""
+    """读取 config.json 中的应用配置；文件缺失或读取失败时回退为默认语言。"""
     try:
         data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
         if isinstance(data, dict) and data.get("language") in SUPPORTED_LANGUAGES:
             return {"language": data["language"]}
     except Exception:
         pass
-    return {"language": "en"}
+    return {"language": DEFAULT_LANGUAGE}
 
 
 @app.post("/api/config")
 def api_set_config(payload: AppConfig) -> dict:
     """把应用配置写入 config.json。"""
-    language = payload.language if payload.language in SUPPORTED_LANGUAGES else "en"
+    language = payload.language if payload.language in SUPPORTED_LANGUAGES else DEFAULT_LANGUAGE
     CONFIG_FILE.write_text(
         json.dumps({"language": language}, ensure_ascii=False, indent=2),
         encoding="utf-8",

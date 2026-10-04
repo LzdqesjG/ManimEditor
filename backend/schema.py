@@ -83,4 +83,4 @@ class SceneSpec(BaseModel):
 class AppConfig(BaseModel):
     """应用级配置（持久化到 config.json）。"""
 
-    language: str = "en"
+    language: str = "en_us"

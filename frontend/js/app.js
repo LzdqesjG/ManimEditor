@@ -141,8 +141,8 @@ function bindToolbar() {
 }
 
 async function toggleLanguage() {
-  const next = currentLang === 'en' ? 'zh' : 'en';
-  setLanguage(next);
+  const next = currentLang === 'en_us' ? 'zh_cn' : 'en_us';
+  await setLanguage(next);
   emit();
   refreshSceneList();
   try {
@@ -249,14 +249,14 @@ async function init() {
   bindCanvas();
 
   // 语言：读取 config.json；读取失败时回退英文
-  let lang = 'en';
+  let lang = 'en_us';
   try {
     const config = await API.getConfig();
-    if (config && config.language === 'zh') lang = 'zh';
+    if (config && config.language === 'zh_cn') lang = 'zh_cn';
   } catch (err) {
-    lang = 'en';
+    lang = 'en_us';
   }
-  setLanguage(lang);
+  await setLanguage(lang);
 
   const draft = loadDraft();
   if (draft) {
