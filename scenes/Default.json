@@ -1,0 +1,126 @@
+{
+  "name": "MathLesson",
+  "config": {
+    "background_color": "#0b0e14",
+    "frame_width": 14.222222,
+    "frame_height": 8.0,
+    "fps": 15,
+    "quality": "low",
+    "scene_type": "ThreeDScene"
+  },
+  "mobjects": [
+    {
+      "id": "title",
+      "type": "Text",
+      "args": ["数学课：复数与三维函数"],
+      "kwargs": { "font_size": 40, "color": "#FFFFFF" },
+      "methods": [{ "name": "to_edge", "args": [":expr:UP"], "kwargs": { "buff": 0.5 } }],
+      "label": "标题"
+    },
+    {
+      "id": "plane",
+      "type": "ComplexPlane",
+      "methods": [{ "name": "scale", "args": [0.75] }],
+      "label": "复平面"
+    },
+    {
+      "id": "unit_circle",
+      "type": "Circle",
+      "kwargs": { "radius": 1, "color": "#4dabf7" },
+      "label": "单位圆"
+    },
+    {
+      "id": "vec_z1",
+      "type": "Arrow",
+      "args": [[0, 0, 0], [1, 2, 0]],
+      "kwargs": { "color": "#ffd166", "buff": 0 },
+      "label": "复数向量 z = 1 + 2i"
+    },
+    {
+      "id": "point_z1",
+      "type": "Dot",
+      "kwargs": { "point": [1, 2, 0], "radius": 0.1, "color": "#ffd166" },
+      "label": "复数点"
+    },
+    {
+      "id": "label_z1",
+      "type": "Text",
+      "args": ["z = 1 + 2i"],
+      "kwargs": { "font_size": 30, "color": "#ffd166" },
+      "methods": [{ "name": "move_to", "args": [[2.1, 2.5, 0]] }],
+      "label": "z 的标签"
+    },
+    {
+      "id": "label_i",
+      "type": "Text",
+      "args": ["i"],
+      "kwargs": { "font_size": 30, "color": "#06d6a0" },
+      "methods": [{ "name": "move_to", "args": [[0.4, 1.3, 0]] }],
+      "label": "虚轴单位 i"
+    },
+    {
+      "id": "axis3d",
+      "type": "ThreeDAxes",
+      "label": "三维坐标轴"
+    },
+    {
+      "id": "surface",
+      "type": "Surface",
+      "args": [":expr:lambda u, v: np.array([u, v, 0.7 * np.sin(u) * np.cos(v)])"],
+      "kwargs": {
+        "u_range": [-3, 3],
+        "v_range": [-3, 3],
+        "resolution": [32, 32],
+        "checkerboard_colors": ["#3a86ff", "#06d6a0"],
+        "fill_opacity": 0.9
+      },
+      "label": "三维曲面 z = 0.7 sin(x) cos(y)"
+    },
+    {
+      "id": "label_surface",
+      "type": "Text",
+      "args": ["z = 0.7 sin(x) cos(y)"],
+      "kwargs": { "font_size": 30, "color": "#06d6a0" },
+      "methods": [{ "name": "move_to", "args": [[2.8, 2.8, 2.4]] }],
+      "label": "曲面标签"
+    }
+  ],
+  "animations": [
+    { "id": "a1", "type": "Write", "targets": ["title"], "start": 0.0, "run_time": 1.5 },
+
+    { "id": "a2", "type": "Create", "targets": ["plane"], "start": 1.5, "run_time": 1.5 },
+    { "id": "a3", "type": "Create", "targets": ["unit_circle"], "start": 3.0, "run_time": 1.0 },
+    { "id": "a4", "type": "Create", "targets": ["vec_z1"], "start": 4.0, "run_time": 1.0 },
+    { "id": "a5", "type": "FadeIn", "targets": ["point_z1"], "start": 4.0, "run_time": 0.8 },
+    { "id": "a6", "type": "FadeIn", "targets": ["label_z1"], "start": 5.3, "run_time": 0.8 },
+    { "id": "a7", "type": "FadeIn", "targets": ["label_i"], "start": 5.3, "run_time": 0.8 },
+    {
+      "id": "a8",
+      "type": "Rotate",
+      "targets": ["vec_z1"],
+      "kwargs": { "angle": ":expr:PI/2" },
+      "start": 6.5,
+      "run_time": 2.0
+    },
+
+    { "id": "a9", "type": "FadeOut", "targets": ["plane"], "start": 9.0, "run_time": 1.0 },
+    { "id": "a10", "type": "FadeOut", "targets": ["unit_circle"], "start": 9.0, "run_time": 1.0 },
+    { "id": "a11", "type": "FadeOut", "targets": ["vec_z1"], "start": 9.0, "run_time": 1.0 },
+    { "id": "a12", "type": "FadeOut", "targets": ["point_z1"], "start": 9.0, "run_time": 1.0 },
+    { "id": "a13", "type": "FadeOut", "targets": ["label_z1"], "start": 9.0, "run_time": 1.0 },
+    { "id": "a14", "type": "FadeOut", "targets": ["label_i"], "start": 9.0, "run_time": 1.0 },
+
+    { "id": "a15", "type": "Create", "targets": ["axis3d"], "start": 10.0, "run_time": 1.5 },
+    { "id": "a16", "type": "Create", "targets": ["surface"], "start": 11.5, "run_time": 2.5 },
+    {
+      "id": "a17",
+      "type": "FadeIn",
+      "targets": ["label_surface"],
+      "start": 14.0,
+      "run_time": 1.0
+    }
+  ],
+  "setup_code": "self.set_camera_orientation(phi=55 * DEGREES, theta=-45 * DEGREES)",
+  "frame_code": "self.add_fixed_in_frame_mobjects(title)",
+  "raw_code": ""
+}

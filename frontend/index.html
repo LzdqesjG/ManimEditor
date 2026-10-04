@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ManimEditor</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <header class="toolbar">
+    <span class="brand">ManimEditor</span>
+    <label>场景名
+      <input id="scene-name" value="MyScene" spellcheck="false">
+    </label>
+    <button id="btn-save">保存</button>
+    <button id="btn-new" class="ghost">新建</button>
+    <select id="scene-list" title="打开已保存的场景">
+      <option value="">打开场景…</option>
+    </select>
+    <label>质量
+      <select id="quality">
+        <option value="low">低 480p15</option>
+        <option value="medium">中 720p30</option>
+        <option value="high">高 1080p60</option>
+      </select>
+    </label>
+    <label>场景类型
+      <select id="scene-type">
+        <option value="Scene">2D Scene</option>
+        <option value="ThreeDScene">3D ThreeDScene</option>
+        <option value="MovingCameraScene">MovingCamera</option>
+      </select>
+    </label>
+    <button id="btn-render" class="primary">渲染</button>
+    <span id="render-status" class="status"></span>
+  </header>
+
+  <main class="layout">
+    <aside class="panel">
+      <div class="panel-head">
+        <input id="lib-search" placeholder="搜索 manim 对象 / 动画" spellcheck="false">
+      </div>
+      <div class="tabs">
+        <button class="tab active" data-tab="mobjects">图形</button>
+        <button class="tab" data-tab="animations">动画</button>
+      </div>
+      <div id="lib-list" class="scroll"></div>
+    </aside>
+
+    <section class="stage">
+      <div class="stage-head">
+        <span>画布 · 近似预览（最终效果以渲染为准）</span>
+        <span id="stage-hint" class="hint">点击左侧图形添加对象</span>
+      </div>
+      <div id="canvas-wrap" class="canvas-wrap">
+        <canvas id="canvas"></canvas>
+        <video id="video" controls hidden></video>
+      </div>
+      <div class="timeline">
+        <div class="panel-head"><span>时间轴</span><span id="timeline-info" class="hint"></span></div>
+        <div id="timeline" class="timeline-body"></div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="tabs">
+        <button class="tab active" data-tab="props">属性</button>
+        <button class="tab" data-tab="code">代码</button>
+      </div>
+      <div id="panel-props" class="scroll"></div>
+      <div id="panel-code" class="scroll" hidden>
+        <div class="code-head">
+          <span>生成的 manim 代码</span>
+          <button id="btn-refresh-code" class="ghost">刷新</button>
+        </div>
+        <pre id="code-view" class="code"></pre>
+      </div>
+    </aside>
+  </main>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/state.js"></script>
+  <script src="/static/js/catalog.js"></script>
+  <script src="/static/js/inspector.js"></script>
+  <script src="/static/js/canvas.js"></script>
+  <script src="/static/js/timeline.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

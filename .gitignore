@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# 虚拟环境
+.venv/
+venv/
+
+# 编辑器 / 操作系统
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# 渲染产物与运行时数据
+workspace/*
+
+# 用户场景文件（保留默认示例）
+scenes/*
+!scenes/Default.json
