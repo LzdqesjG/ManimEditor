@@ -25,4 +25,8 @@ const API = {
   loadScene: (name) => httpGet('/api/scenes/' + encodeURIComponent(name)),
   getConfig: () => httpGet('/api/config'),
   saveConfig: (config) => httpPost('/api/config', config),
+  updateStatus: () => httpGet('/api/update/status'),
+  updateApply: () => httpPost('/api/update/apply', {}),
+  updateResult: () => httpGet('/api/update/result'),
+  updateResultAck: () => httpPost('/api/update/result/ack', {}),
 };

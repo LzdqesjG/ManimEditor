@@ -14,7 +14,8 @@ ManimEditor 是一个本地运行的 manim 可视化编辑器：在画布上摆�
 - **一键渲染**：后台调用 manim 渲染 mp4，完成后直接在页面播放。
 - **场景存档**：保存 / 打开 `scenes/*.json`，每个图形和动画的参数、时间都被完整记录。
 - **本地草稿**：编辑内容自动存入浏览器本地，刷新页面不丢失。
-- **界面多语言**：内置英文与简体中文，右上角一键切换；选择持久化到 `config.json`，读取不到时默认英文。
+- **界面多语言**：内置英文、简体中文、繁体中文，右上角下拉切换；选择持久化到 `config.json`，读取不到时默认英文。
+- **自动更新**：启动时异步检查 GitHub 上的新版本，可在网页端一键更新（自动备份并重启）。
 
 ## 环境要求
 
@@ -80,6 +81,25 @@ python main.py
 
 > 仓库自带示例场景 `scenes/Default.json`（数学课：复数与三维函数），在「打开场景…」中选择 `Default` 即可加载并直接渲染。
 
+## 自动更新
+
+启动时会在后台异步检查新版本，不阻塞正常使用。
+
+- 更新源配置在 `project.toml`：`[update] primary` 为主地址，`backup` 为备用地址（主地址下载失败时自动尝试备用，备用可留空）。
+- 检查流程：下载 zip → 解压到 `tmp/` → 递归识别同时包含 `main.py`、`backend/`、`frontend/` 的目录 → 读取该目录 `project.toml` 的 `version` 与 `complete_time`。
+- 仅当**版本号不同**且**远端 `complete_time` 更大**时，网页端才会弹窗询问。
+- 确认更新后：当前内容（除 `update.py`、`rollback/`、`tmp/` 外）备份到 `rollback/<旧版本>/`，新版本替换到位，随后自动重启 `main.py`；页面刷新后提示「更新完成」。
+
+## 语言支持
+
+目前仅维护以下三种界面语言：
+
+- 🇬🇧 English (US) — `en_us.json`
+- 🇨🇳 中文 (简体) — `zh_cn.json`
+- 繁體中文（不带国旗）— `zh_tw.json`
+
+> `frontend/lang/` 下仍保留了其它语言的翻译文件（`ja_jp`、`ko_kr`、`fr_fr` 等），但**已停止支持**：它们不再出现在语言选择框中，也不会随新功能更新。如需恢复某个语言，在 `languages.json` 中加回对应条目并补齐新增词条即可。
+
 ## 工作原理
 
 ```
@@ -93,12 +113,15 @@ FastAPI 后端 ──► 代码生成器 ──► manim CLI ──► mp4
 - **反射**：`backend/manim_api.py` 扫描 manim 命名空间，提取每个类的构造函数参数（名称、类型、默认值、是否必填），作为对象库与参数面板的数据来源。
 - **代码生成**：`backend/codegen.py` 把场景 JSON 翻译成手写风格的 manim 脚本，处理对象预添加、引入型动画、时间轴空档、对象引用等细节。
 - **渲染**：`backend/renderer.py` 在后台线程中调用 `manim render`，前端通过任务 id 轮询进度。
+- **自更新**：`update.py` 只依赖标准库，既被后端加载用于检查更新，也作为独立进程负责备份、替换与重启。
 
 ## 目录结构
 
 ```
 ManimEditor/
 ├── main.py                 # 启动入口
+├── update.py               # 自更新器（检查 / 下载 / 备份 / 替换 / 重启）
+├── project.toml            # 版本信息与更新源配置
 ├── requirements.txt
 ├── backend/
 │   ├── app.py              # FastAPI 接口与前端托管
@@ -110,9 +133,11 @@ ManimEditor/
 │   ├── index.html
 │   ├── css/style.css
 │   ├── js/                 # i18n / api / state / catalog / inspector / canvas / timeline / app
-│   └── lang/               # 语言包：en_us.json / zh_cn.json
+│   └── lang/               # languages.json（语言清单）+ 各语言包
 ├── scenes/                 # 保存的场景文件（含 Default.json 示例）
-└── workspace/              # 渲染产物（自动生成）
+├── workspace/              # 渲染产物（自动生成）
+├── tmp/                    # 更新解压与结果标记（自动生成）
+└── rollback/               # 更新前的备份（自动生成）
 ```
 
 ## 接口
@@ -128,12 +153,19 @@ ManimEditor/
 | POST | `/api/scenes/{name}` | 保存场景 |
 | GET | `/api/scenes/{name}` | 读取场景 |
 | DELETE | `/api/scenes/{name}` | 删除场景 |
+| GET | `/api/config` | 读取应用配置（含是否已配置语言） |
+| POST | `/api/config` | 写入应用配置 |
+| GET | `/api/update/status` | 查询更新检查结果 |
+| POST | `/api/update/apply` | 应用更新（随后自动重启） |
+| GET | `/api/update/result` | 读取最近一次更新结果 |
+| POST | `/api/update/result/ack` | 确认更新完成提示 |
 
 ## 已知限制
 
 - 画布是**近似预览**，用于摆位与结构确认，精确效果以渲染结果为准。
 - 可视化参数面板覆盖 manim 的公共构造函数参数；链式方法（`shift`/`scale`/`set_color` 等）与复杂效果请使用代码面板。
 - 尚无撤销 / 重做。
+- 自更新依赖 GitHub 可达；更新过程会短暂中断服务并重启。
 - 面向本地单用户使用，**没有鉴权**，请勿直接暴露到公网。
 
 ## 许可证

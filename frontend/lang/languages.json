@@ -1,22 +1,5 @@
 [
   { "code": "en_us", "name": "English (US)", "flag": "🇬🇧" },
   { "code": "zh_cn", "name": "中文 (简体)", "flag": "🇨🇳" },
-  { "code": "zh_tw", "name": "繁體中文", "flag": "🇨🇳" },
-  { "code": "ja_jp", "name": "日本語", "flag": "🇯🇵" },
-  { "code": "ko_kr", "name": "한국어", "flag": "🇰🇷" },
-  { "code": "es_es", "name": "Español", "flag": "🇪🇸" },
-  { "code": "fr_fr", "name": "Français", "flag": "🇫🇷" },
-  { "code": "de_de", "name": "Deutsch", "flag": "🇩🇪" },
-  { "code": "it_it", "name": "Italiano", "flag": "🇮🇹" },
-  { "code": "pt_br", "name": "Português (Brasil)", "flag": "🇧🇷" },
-  { "code": "ru_ru", "name": "Русский", "flag": "🇷🇺" },
-  { "code": "ar_sa", "name": "العربية", "flag": "🇸🇦" },
-  { "code": "hi_in", "name": "हिन्दी", "flag": "🇮🇳" },
-  { "code": "th_th", "name": "ไทย", "flag": "🇹🇭" },
-  { "code": "vi_vn", "name": "Tiếng Việt", "flag": "🇻🇳" },
-  { "code": "id_id", "name": "Bahasa Indonesia", "flag": "🇮🇩" },
-  { "code": "tr_tr", "name": "Türkçe", "flag": "🇹🇷" },
-  { "code": "pl_pl", "name": "Polski", "flag": "🇵🇱" },
-  { "code": "nl_nl", "name": "Nederlands", "flag": "🇳🇱" },
-  { "code": "sv_se", "name": "Svenska", "flag": "🇸🇪" }
+  { "code": "zh_tw", "name": "繁體中文", "flag": "" }
 ]

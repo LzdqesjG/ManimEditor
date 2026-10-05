@@ -1,9 +1,16 @@
-"""FastAPI 应用：对外提供 manim 元数据、代码生成、渲染等接口，并托管前端页面。"""
+"""FastAPI 应用：对外提供 manim 元数据、代码生成、渲染、自更新等接口，并托管前端页面。"""
 
 from __future__ import annotations
 
+import importlib.util
 import json
+import os
 import re
+import subprocess
+import sys
+import threading
+import time
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -17,8 +24,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 SCENES_DIR = BASE_DIR / "scenes"
 CONFIG_FILE = BASE_DIR / "config.json"
-
 LANGUAGES_FILE = FRONTEND_DIR / "lang" / "languages.json"
+UPDATER_FILE = BASE_DIR / "update.py"
 
 
 def _load_supported_languages() -> tuple[str, ...]:
@@ -39,7 +46,58 @@ def _load_supported_languages() -> tuple[str, ...]:
 SUPPORTED_LANGUAGES = _load_supported_languages()
 DEFAULT_LANGUAGE = "en_us"
 
-app = FastAPI(title="ManimEditor", version="0.1.0")
+
+# ------------------------------------------------------------------ 自更新
+
+_update_state: dict = {
+    "checked": False,
+    "available": False,
+    "local_version": "",
+    "local_time": 0.0,
+    "remote_version": "",
+    "remote_time": 0.0,
+    "new_root": "",
+    "error": "",
+}
+_update_lock = threading.Lock()
+_updater_module = None
+
+
+def _load_updater():
+    """按文件路径加载根目录的 update.py，避免依赖 sys.path。"""
+    global _updater_module
+    if _updater_module is None:
+        spec = importlib.util.spec_from_file_location("manim_editor_updater", UPDATER_FILE)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _updater_module = module
+    return _updater_module
+
+
+def _run_update_check(delay: float = 2.0) -> None:
+    """后台线程：启动后异步检查更新，不阻塞服务。"""
+    time.sleep(delay)
+    try:
+        result = _load_updater().check_for_update(BASE_DIR)
+    except Exception as exc:
+        result = {"checked": True, "error": str(exc)}
+    with _update_lock:
+        for key in _update_state:
+            if key in result:
+                _update_state[key] = result[key]
+
+
+def _update_result_file() -> Path:
+    return BASE_DIR / "tmp" / "update_done.json"
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    threading.Thread(target=_run_update_check, daemon=True).start()
+    yield
+
+
+app = FastAPI(title="ManimEditor", version="0.1.0", lifespan=lifespan)
 
 
 def _scene_path(name: str) -> Path:
@@ -81,6 +139,68 @@ def api_set_config(payload: AppConfig) -> dict:
         encoding="utf-8",
     )
     return {"language": language}
+
+
+@app.get("/api/update/status")
+def api_update_status() -> dict:
+    """返回后台更新检查的结果。"""
+    with _update_lock:
+        return dict(_update_state)
+
+
+@app.post("/api/update/apply")
+def api_update_apply() -> dict:
+    """启动独立更新进程，随后终止当前服务进程（更新进程会重新拉起 main.py）。"""
+    with _update_lock:
+        state = dict(_update_state)
+    if not state.get("available"):
+        raise HTTPException(status_code=400, detail="没有可用更新")
+    new_root = state.get("new_root") or ""
+    if not new_root or not Path(new_root).exists():
+        raise HTTPException(status_code=400, detail="更新内容不存在，请重新检查更新")
+
+    flags = 0
+    if sys.platform == "win32":
+        flags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+    subprocess.Popen(
+        [
+            sys.executable,
+            str(UPDATER_FILE),
+            "--apply",
+            "--root", str(BASE_DIR),
+            "--new", new_root,
+            "--old-version", state.get("local_version", ""),
+            "--result", str(_update_result_file()),
+        ],
+        cwd=str(BASE_DIR),
+        creationflags=flags,
+        close_fds=True,
+    )
+    # 留出时间返回响应，然后终止本进程
+    threading.Timer(1.2, lambda: os._exit(0)).start()
+    return {"ok": True}
+
+
+@app.get("/api/update/result")
+def api_update_result() -> dict:
+    """读取上次更新的结果标记（存在说明刚刚更新过）。"""
+    path = _update_result_file()
+    if path.exists():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return {"updated": not data.get("error"), **data}
+        except Exception:
+            return {"updated": False}
+    return {"updated": False}
+
+
+@app.post("/api/update/result/ack")
+def api_update_result_ack() -> dict:
+    """确认已提示过更新完成，清除标记。"""
+    path = _update_result_file()
+    if path.exists():
+        path.unlink()
+    return {"ok": True}
 
 
 @app.get("/manifest.json")

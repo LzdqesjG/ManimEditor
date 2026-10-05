@@ -164,6 +164,61 @@ function showLanguageModal() {
   }, { once: true });
 }
 
+// 发现新版本时弹窗询问
+function showUpdateModal(status) {
+  const modal = document.getElementById('update-modal');
+  const body = document.getElementById('update-body');
+  if (!modal) return;
+  if (body) body.textContent = t('updateBody', { version: status.remote_version });
+  modal.hidden = false;
+
+  document.getElementById('update-later').addEventListener('click', () => {
+    modal.hidden = true;
+  }, { once: true });
+
+  document.getElementById('update-now').addEventListener('click', async () => {
+    modal.hidden = true;
+    setStatus(t('updating'));
+    showToast(t('updating'));
+    try {
+      await API.updateApply();
+    } catch (err) {
+      showToast(t('updateFailed') + err.message, true);
+      return;
+    }
+    waitForServerRestart();
+  }, { once: true });
+}
+
+// 更新期间服务会重启：轮询到恢复后自动刷新页面
+function waitForServerRestart() {
+  const timer = setInterval(async () => {
+    try {
+      await API.updateStatus();
+      clearInterval(timer);
+      location.reload();
+    } catch (err) { /* 服务尚未恢复，继续等待 */ }
+  }, 1500);
+}
+
+async function checkForUpdate() {
+  try {
+    const status = await API.updateStatus();
+    if (status && status.available) showUpdateModal(status);
+  } catch (err) { /* 检查失败不影响使用 */ }
+}
+
+// 刚完成过更新时，进入页面后提示
+async function notifyUpdateResult() {
+  try {
+    const result = await API.updateResult();
+    if (result && result.updated) {
+      showToast(t('updateDone', { version: result.version || '' }));
+      await API.updateResultAck();
+    }
+  } catch (err) { /* 忽略 */ }
+}
+
 function syncToolbar() {
   document.getElementById('scene-name').value = state.scene.name;
   document.getElementById('quality').value = state.scene.config.quality;
@@ -292,6 +347,10 @@ async function init() {
   refreshSceneList();
 
   if (!configured) showLanguageModal();
+
+  // 更新：先提示上次的更新结果，再异步检查新版本
+  notifyUpdateResult();
+  checkForUpdate();
 }
 
 window.addEventListener('DOMContentLoaded', init);

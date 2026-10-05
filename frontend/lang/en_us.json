@@ -52,5 +52,12 @@
   "openFailed": "Open failed: ",
   "openedScene": "Opened {name}",
   "codegenFailed": "Code generation failed: ",
-  "catalogFailed": "Failed to load manim catalog: "
+  "catalogFailed": "Failed to load manim catalog: ",
+  "updateTitle": "Update available",
+  "updateBody": "A new version {version} is available. Update now? The app will restart automatically.",
+  "updateNow": "Update now",
+  "updateLater": "Later",
+  "updating": "Updating, the page will refresh automatically…",
+  "updateDone": "Update complete! Now running {version}.",
+  "updateFailed": "Update failed: "
 }

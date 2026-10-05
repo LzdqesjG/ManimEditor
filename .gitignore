@@ -14,6 +14,8 @@ Thumbs.db
 
 # 临时产物 / Temp Product
 workspace/*
+tmp/
+rollback/
 
 # 用户文件 / User Files
 scenes/*
