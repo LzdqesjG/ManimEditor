@@ -89,6 +89,50 @@ def find_update_root(base: Path) -> Path | None:
     return None
 
 
+def _load_gitignore_protected(project_root: Path) -> set[str]:
+    """从 .gitignore 归纳出需要保护的顶层条目名，作为 PRESERVE_TOP 的补充。
+
+    目的：即使更新包里意外夹带了被忽略的内容（如 .venv、workspace），也不会污染本地。
+
+    只做保守解析（够用即可）：
+      - 跳过注释、空行，以及含通配符的模式（无法对应到具体顶层名）
+      - 取路径的第一段作为顶层名，例如 `workspace/*` → `workspace`
+      - 若某顶层存在 `!` 取反规则（说明该目录下有内容受版本控制），则不保护它，
+        例如 `scenes/*` + `!scenes/Default.json` → 不保护 scenes，允许更新 Default.json
+    """
+    try:
+        lines = (
+            (Path(project_root) / ".gitignore").read_text(encoding="utf-8", errors="ignore")
+        ).splitlines()
+    except Exception:
+        return set()
+
+    def _top(text: str) -> str:
+        segment = text.strip().lstrip("/").split("/")[0]
+        if not segment or any(ch in segment for ch in "*?[]"):
+            return ""
+        return segment
+
+    ignored: set[str] = set()
+    negated: set[str] = set()
+    for raw in lines:
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("!"):
+            name = _top(line[1:])
+            if name:
+                negated.add(name)
+            continue
+        if " #" in line:  # 行尾注释
+            line = line.split(" #", 1)[0].strip()
+        name = _top(line)
+        if name:
+            ignored.add(name)
+
+    return ignored - negated
+
+
 def check_for_update(project_root: Path) -> dict:
     """检查更新，不改动项目文件。返回状态字典。"""
     project_root = Path(project_root)
@@ -207,6 +251,9 @@ def apply_update(project_root: Path, new_root: Path, old_version: str, result_fi
         backup_dir,
     )
 
+    protected = set(PRESERVE_TOP) | _load_gitignore_protected(project_root)
+    _log.info("受保护顶层条目：%s", ", ".join(sorted(protected)))
+
     written = 0
     backed_up = 0
     skipped = []
@@ -214,7 +261,7 @@ def apply_update(project_root: Path, new_root: Path, old_version: str, result_fi
         if not src.is_file():
             continue
         rel = src.relative_to(new_root)
-        if rel.parts and rel.parts[0] in PRESERVE_TOP:
+        if rel.parts and rel.parts[0] in protected:
             skipped.append(str(rel))
             continue
 
