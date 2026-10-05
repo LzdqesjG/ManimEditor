@@ -201,11 +201,32 @@ function waitForServerRestart() {
   }, 1500);
 }
 
-async function checkForUpdate() {
+// 后台检查有延迟，轮询几次直到拿到结果
+async function checkForUpdate(attempt = 0) {
   try {
     const status = await API.updateStatus();
-    if (status && status.available) showUpdateModal(status);
-  } catch (err) { /* 检查失败不影响使用 */ }
+    console.log('[update] status:', status);
+
+    if (status && !status.checked) {
+      if (attempt < 6) {
+        setTimeout(() => checkForUpdate(attempt + 1), 2000);
+      } else {
+        console.log('[update] 后台检查仍未完成，停止轮询');
+      }
+      return;
+    }
+    if (status && status.available) {
+      console.log(
+        `[update] 发现新版本 ${status.remote_version}（本地 ${status.local_version}），弹出更新提示`
+      );
+      showUpdateModal(status);
+    } else {
+      const detail = status && status.error ? `，检查异常：${status.error}` : '';
+      console.log(`[update] 无可用更新（本地 ${status ? status.local_version : '?'}${detail}）`);
+    }
+  } catch (err) {
+    console.log('[update] 获取更新状态失败：', err.message);
+  }
 }
 
 // 刚完成过更新时，进入页面后提示

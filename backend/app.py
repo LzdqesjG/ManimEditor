@@ -76,15 +76,23 @@ def _load_updater():
 
 def _run_update_check(delay: float = 2.0) -> None:
     """后台线程：启动后异步检查更新，不阻塞服务。"""
+    print(f"[update] {delay:.0f}s 后开始检查更新…", flush=True)
     time.sleep(delay)
     try:
         result = _load_updater().check_for_update(BASE_DIR)
     except Exception as exc:
         result = {"checked": True, "error": str(exc)}
+        print(f"[update] 检查过程出错：{exc}", flush=True)
     with _update_lock:
         for key in _update_state:
             if key in result:
                 _update_state[key] = result[key]
+        snapshot = dict(_update_state)
+    print(
+        "[update] 检查完成 -> available={available} local={local_version} "
+        "remote={remote_version} error={error}".format(**snapshot),
+        flush=True,
+    )
 
 
 def _update_result_file() -> Path:

@@ -1,7 +1,7 @@
 # 项目元信息：更新器依赖 version 与 complete_time 两个字段
 version = "0.1.0"
 # 本版本完成时间（Unix 时间戳，秒）。仅当远端时间戳更大且版本号不同时才提示更新
-complete_time = 1791203723
+complete_time = 17912037233
 
 # 更新源：主地址失败时自动尝试备用地址（备用可留空）
 [update]

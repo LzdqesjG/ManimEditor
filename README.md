@@ -86,9 +86,10 @@ python main.py
 启动时会在后台异步检查新版本，不阻塞正常使用。
 
 - 更新源配置在 `project.toml`：`[update] primary` 为主地址，`backup` 为备用地址（主地址下载失败时自动尝试备用，备用可留空）。
-- 检查流程：下载 zip → 解压到 `tmp/` → 递归识别同时包含 `main.py`、`backend/`、`frontend/` 的目录 → 读取该目录 `project.toml` 的 `version` 与 `complete_time`。
+- 检查流程：下载 zip → 解压到 `tmp/pkg/` → 递归识别同时包含 `main.py`、`backend/`、`frontend/` 的目录 → 读取该目录 `project.toml` 的 `version` 与 `complete_time`。
 - 仅当**版本号不同**且**远端 `complete_time` 更大**时，网页端才会弹窗询问。
-- 确认更新后：当前内容（除 `update.py`、`rollback/`、`tmp/` 外）备份到 `rollback/<旧版本>/`，新版本替换到位，随后自动重启 `main.py`；页面刷新后提示「更新完成」。
+- 确认更新后：新版本包含的文件**覆盖**到项目中，同名旧文件先备份到 `rollback/<旧版本>/`（保持相对路径，便于回滚）；随后自动重启 `main.py`，页面刷新后提示「更新完成」。
+- **采用覆盖而非整体替换**：不会删除 zip 里没有的文件，也不会触碰 `.venv/`、`.git/`、`config.json`、`scenes/`、`workspace/`、`tmp/`、`rollback/`。虚拟环境是正在运行的进程本身，用户数据也不会丢。
 
 ## 语言支持
 
