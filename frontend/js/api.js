@@ -26,6 +26,7 @@ const API = {
   getConfig: () => httpGet('/api/config'),
   saveConfig: (config) => httpPost('/api/config', config),
   updateStatus: () => httpGet('/api/update/status'),
+  updateCheck: () => httpPost('/api/update/check', {}),
   updateApply: () => httpPost('/api/update/apply', {}),
   updateResult: () => httpGet('/api/update/result'),
   updateResultAck: () => httpPost('/api/update/result/ack', {}),

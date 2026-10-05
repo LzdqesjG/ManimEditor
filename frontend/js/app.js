@@ -128,6 +128,7 @@ function bindToolbar() {
   });
   document.getElementById('btn-render').addEventListener('click', doRender);
   document.getElementById('btn-refresh-code').addEventListener('click', updateCode);
+  document.getElementById('btn-check-update').addEventListener('click', manualCheckUpdate);
   document.getElementById('lang-select').addEventListener('change', (e) => changeLanguage(e.target.value));
   document.getElementById('btn-save').addEventListener('click', saveSceneToServer);
   document.getElementById('btn-new').addEventListener('click', newScene);
@@ -227,6 +228,48 @@ async function checkForUpdate(attempt = 0) {
   } catch (err) {
     console.log('[update] 获取更新状态失败：', err.message);
   }
+}
+
+// 右上角按钮触发的手动检查：先请求后端重新检查，再轮询等待结果
+async function manualCheckUpdate() {
+  const btn = document.getElementById('btn-check-update');
+  btn.disabled = true;
+  showToast(t('checkingUpdate'));
+  try {
+    await API.updateCheck();
+  } catch (err) {
+    btn.disabled = false;
+    showToast(t('updateFailed') + err.message, true);
+    return;
+  }
+  pollCheckResult(btn);
+}
+
+function pollCheckResult(btn, attempt = 0) {
+  setTimeout(async () => {
+    try {
+      const status = await API.updateStatus();
+      if (status && status.checking) {
+        if (attempt < 30) {
+          pollCheckResult(btn, attempt + 1);
+        } else {
+          btn.disabled = false;
+          showToast(t('updateFailed') + 'timeout', true);
+        }
+        return;
+      }
+      btn.disabled = false;
+      console.log('[update] 手动检查结果:', status);
+      if (status && status.available) {
+        showUpdateModal(status);
+      } else {
+        showToast(status && status.error ? t('updateFailed') + status.error : t('upToDate'));
+      }
+    } catch (err) {
+      btn.disabled = false;
+      showToast(t('updateFailed') + err.message, true);
+    }
+  }, 1000);
 }
 
 // 刚完成过更新时，进入页面后提示

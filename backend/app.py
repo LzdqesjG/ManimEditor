@@ -51,6 +51,7 @@ DEFAULT_LANGUAGE = "en_us"
 
 _update_state: dict = {
     "checked": False,
+    "checking": False,
     "available": False,
     "local_version": "",
     "local_time": 0.0,
@@ -75,9 +76,12 @@ def _load_updater():
 
 
 def _run_update_check(delay: float = 2.0) -> None:
-    """后台线程：启动后异步检查更新，不阻塞服务。"""
-    print(f"[update] {delay:.0f}s 后开始检查更新…", flush=True)
-    time.sleep(delay)
+    """后台线程：异步检查更新，不阻塞服务。"""
+    if delay > 0:
+        print(f"[update] {delay:.0f}s 后开始检查更新…", flush=True)
+        time.sleep(delay)
+    else:
+        print("[update] 开始检查更新…", flush=True)
     try:
         result = _load_updater().check_for_update(BASE_DIR)
     except Exception as exc:
@@ -87,6 +91,7 @@ def _run_update_check(delay: float = 2.0) -> None:
         for key in _update_state:
             if key in result:
                 _update_state[key] = result[key]
+        _update_state["checking"] = False
         snapshot = dict(_update_state)
     print(
         "[update] 检查完成 -> available={available} local={local_version} "
@@ -101,8 +106,11 @@ def _update_result_file() -> Path:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    threading.Thread(target=_run_update_check, daemon=True).start()
+    checker = threading.Thread(target=_run_update_check, daemon=True)
+    checker.start()
     yield
+    # 关闭时给检查线程一点收尾时间，避免它与解释器 finalize 争抢 stdout
+    checker.join(timeout=3.0)
 
 
 app = FastAPI(title="ManimEditor", version="0.1.0", lifespan=lifespan)
@@ -154,6 +162,20 @@ def api_update_status() -> dict:
     """返回后台更新检查的结果。"""
     with _update_lock:
         return dict(_update_state)
+
+
+@app.post("/api/update/check")
+def api_update_check() -> dict:
+    """手动触发一次更新检查（异步执行，结果仍通过 /api/update/status 读取）。"""
+    with _update_lock:
+        if _update_state.get("checking"):
+            return {"ok": False, "reason": "already-checking"}
+        _update_state["checked"] = False
+        _update_state["checking"] = True
+        _update_state["available"] = False
+        _update_state["error"] = ""
+    threading.Thread(target=_run_update_check, args=(0.0,), daemon=True).start()
+    return {"ok": True}
 
 
 @app.post("/api/update/apply")

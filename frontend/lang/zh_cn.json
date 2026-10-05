@@ -59,5 +59,8 @@
   "updateLater": "稍后",
   "updating": "正在更新，页面将自动刷新…",
   "updateDone": "更新完成！已更新到 {version}。",
-  "updateFailed": "更新失败："
+  "updateFailed": "更新失败：",
+  "checkUpdate": "⬆️检查更新",
+  "checkingUpdate": "正在检查更新…",
+  "upToDate": "当前已是最新版本"
 }

@@ -59,5 +59,8 @@
   "updateLater": "Later",
   "updating": "Updating, the page will refresh automatically…",
   "updateDone": "Update complete! Now running {version}.",
-  "updateFailed": "Update failed: "
+  "updateFailed": "Update failed: ",
+  "checkUpdate": "⬆️Check for update",
+  "checkingUpdate": "Checking for updates…",
+  "upToDate": "You're on the latest version"
 }
