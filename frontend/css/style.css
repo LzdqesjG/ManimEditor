@@ -195,3 +195,30 @@ button.danger { border-color: var(--red); color: var(--red); }
   padding: 8px 16px; border-radius: 6px; z-index: 99;
 }
 .toast.err { border-color: var(--red); color: #ffb4b4; }
+
+/* 首次使用的语言选择弹窗（必须选择，不可关闭） */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, .65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal[hidden] { display: none; }
+
+.modal-box {
+  width: 540px;
+  max-width: 92vw;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 24px 28px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, .55);
+}
+.modal-title { margin: 0 0 16px; font-size: 18px; }
+.modal-text { margin: 0 0 12px; line-height: 1.75; }
+.modal-question { margin: 20px 0 12px; color: var(--muted); }
+.modal-actions { display: flex; gap: 12px; }
+.modal-actions button { flex: 1 1 0; padding: 10px 0; font-size: 14px; }

@@ -81,6 +81,26 @@
 
   <div id="toast" class="toast" hidden></div>
 
+  <!-- 首次使用（config.json 不存在）：双语对照的语言选择，必须选择一项才能进入 -->
+  <div id="lang-modal" class="modal" hidden>
+    <div class="modal-box">
+      <h2 class="modal-title">Welcome to ManimEditor · 欢迎使用 ManimEditor</h2>
+      <p class="modal-text">
+        ManimEditor is a visual editor for building <b>manim</b> animations:
+        place shapes on the canvas, arrange them on the timeline, and render everything to video.
+      </p>
+      <p class="modal-text">
+        ManimEditor 是一个制作 <b>manim</b> 动画的可视化编辑器：
+        在画布上摆放图形，在时间轴上编排动画，一键渲染成视频。
+      </p>
+      <p class="modal-question">Choose your language · 请选择界面语言</p>
+      <div class="modal-actions">
+        <button id="modal-lang-en">🇬🇧 English (US)</button>
+        <button id="modal-lang-zh">🇨🇳 中文 (简体)</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/static/js/i18n.js"></script>
   <script src="/static/js/api.js"></script>
   <script src="/static/js/state.js"></script>

@@ -242,6 +242,26 @@ async function pollRender(taskId, btn) {
   }
 }
 
+// 首次使用（config.json 不存在）时弹出语言选择；必须点击其一才能进入
+function showLanguageModal() {
+  const modal = document.getElementById('lang-modal');
+  if (!modal) return;
+  modal.hidden = false;
+
+  const choose = async (code) => {
+    modal.hidden = true;
+    await setLanguage(code);
+    emit();
+    refreshSceneList();
+    try {
+      await API.saveConfig({ language: code });
+    } catch (err) { /* 保存失败则仅本次会话生效 */ }
+  };
+
+  document.getElementById('modal-lang-en').addEventListener('click', () => choose('en_us'), { once: true });
+  document.getElementById('modal-lang-zh').addEventListener('click', () => choose('zh_cn'), { once: true });
+}
+
 async function init() {
   bindToolbar();
   bindTabs();
@@ -250,11 +270,13 @@ async function init() {
 
   // 语言：读取 config.json；读取失败时回退英文
   let lang = 'en_us';
+  let configured = true;
   try {
     const config = await API.getConfig();
     if (config && config.language === 'zh_cn') lang = 'zh_cn';
+    configured = !!(config && config.configured);
   } catch (err) {
-    lang = 'en_us';
+    lang = 'en_us'; // 后端不可用时保持英文，也不弹窗（此时选择无法持久化）
   }
   await setLanguage(lang);
 
@@ -272,6 +294,8 @@ async function init() {
   renderLibrary();
   emit();
   refreshSceneList();
+
+  if (!configured) showLanguageModal();
 }
 
 window.addEventListener('DOMContentLoaded', init);

@@ -41,14 +41,18 @@ def api_catalog() -> dict:
 
 @app.get("/api/config")
 def api_get_config() -> dict:
-    """读取 config.json 中的应用配置；文件缺失或读取失败时回退为默认语言。"""
+    """读取 config.json 中的应用配置。
+
+    configured 表示配置文件是否存在且有效：为 False 时前端会弹出首次使用的语言选择。
+    文件缺失或读取失败时回退为默认语言。
+    """
     try:
         data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
         if isinstance(data, dict) and data.get("language") in SUPPORTED_LANGUAGES:
-            return {"language": data["language"]}
+            return {"language": data["language"], "configured": True}
     except Exception:
         pass
-    return {"language": DEFAULT_LANGUAGE}
+    return {"language": DEFAULT_LANGUAGE, "configured": False}
 
 
 @app.post("/api/config")
