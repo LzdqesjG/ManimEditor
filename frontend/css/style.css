@@ -221,4 +221,8 @@ button.danger { border-color: var(--red); color: var(--red); }
 .modal-text { margin: 0 0 12px; line-height: 1.75; }
 .modal-question { margin: 20px 0 12px; color: var(--muted); }
 .modal-actions { display: flex; gap: 12px; }
-.modal-actions button { flex: 1 1 0; padding: 10px 0; font-size: 14px; }
+.modal-actions select { flex: 1 1 auto; padding: 10px 8px; font-size: 14px; }
+.modal-actions button { flex: 0 0 auto; padding: 10px 20px; font-size: 14px; }
+
+/* 语言下拉框 */
+.lang-select { min-width: 150px; }

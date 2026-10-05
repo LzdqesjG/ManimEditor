@@ -33,7 +33,7 @@
     </label>
     <button id="btn-render" class="primary" data-i18n="render"></button>
     <span id="render-status" class="status"></span>
-    <button id="btn-lang" class="ghost">🌏切换为中文 (简体)</button>
+    <select id="lang-select" class="lang-select" title="Language / 语言"></select>
   </header>
 
   <main class="layout">
@@ -81,24 +81,24 @@
 
   <div id="toast" class="toast" hidden></div>
 
-  <!-- 首次使用（config.json 不存在）：双语对照的语言选择，必须选择一项才能进入 -->
+  <!-- 首次使用（config.json 不存在）：双语对照的语言选择，必须选择并确认才能进入 -->
   <div id="lang-modal" class="modal" hidden>
     <div class="modal-box">
       <h2 class="modal-title">Welcome to ManimEditor · 欢迎使用 ManimEditor</h2>
       <p class="modal-text">
         ManimEditor is a visual editor for building <b>manim</b> animations:
         place shapes on the canvas, arrange them on the timeline, and render everything to video.
+        You can switch languages anytime from the top-right corner.
       </p>
       <p class="modal-text">
         ManimEditor 是一个制作 <b>manim</b> 动画的可视化编辑器：
         在画布上摆放图形，在时间轴上编排动画，一键渲染成视频。
+        你随时可以从右上角切换语言。
       </p>
-      <strong>* 你随时可以在页面右上角切换语言。</strong>
-      <strong>* You can switch languages anytime from the top-right corner.</strong>
       <p class="modal-question">Choose your language · 请选择界面语言</p>
       <div class="modal-actions">
-        <button id="modal-lang-en">🇬🇧 English (US)</button>
-        <button id="modal-lang-zh">🇨🇳 中文 (简体)</button>
+        <select id="modal-lang-select" class="lang-select"></select>
+        <button id="modal-lang-confirm" class="primary">Continue · 继续</button>
       </div>
     </div>
   </div>

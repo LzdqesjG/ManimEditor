@@ -18,8 +18,25 @@ FRONTEND_DIR = BASE_DIR / "frontend"
 SCENES_DIR = BASE_DIR / "scenes"
 CONFIG_FILE = BASE_DIR / "config.json"
 
+LANGUAGES_FILE = FRONTEND_DIR / "lang" / "languages.json"
+
+
+def _load_supported_languages() -> tuple[str, ...]:
+    """从 frontend/lang/languages.json 读取支持的语言代码，与前端语言包保持一致。"""
+    try:
+        data = json.loads(LANGUAGES_FILE.read_text(encoding="utf-8"))
+        codes = tuple(
+            item["code"] for item in data if isinstance(item, dict) and item.get("code")
+        )
+        if codes:
+            return codes
+    except Exception:
+        pass
+    return ("en_us",)
+
+
 # 支持的语言代码，与 frontend/lang/<code>.json 一一对应
-SUPPORTED_LANGUAGES = ("en_us", "zh_cn")
+SUPPORTED_LANGUAGES = _load_supported_languages()
 DEFAULT_LANGUAGE = "en_us"
 
 app = FastAPI(title="ManimEditor", version="0.1.0")

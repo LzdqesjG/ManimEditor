@@ -128,7 +128,7 @@ function bindToolbar() {
   });
   document.getElementById('btn-render').addEventListener('click', doRender);
   document.getElementById('btn-refresh-code').addEventListener('click', updateCode);
-  document.getElementById('btn-lang').addEventListener('click', toggleLanguage);
+  document.getElementById('lang-select').addEventListener('change', (e) => changeLanguage(e.target.value));
   document.getElementById('btn-save').addEventListener('click', saveSceneToServer);
   document.getElementById('btn-new').addEventListener('click', newScene);
   document.getElementById('scene-list').addEventListener('change', onSceneSelected);
@@ -140,14 +140,28 @@ function bindToolbar() {
   });
 }
 
-async function toggleLanguage() {
-  const next = currentLang === 'en_us' ? 'zh_cn' : 'en_us';
-  await setLanguage(next);
+// 切换界面语言并持久化到 config.json
+async function changeLanguage(code) {
+  await setLanguage(code);
   emit();
   refreshSceneList();
   try {
-    await API.saveConfig({ language: next });
+    await API.saveConfig({ language: code });
   } catch (err) { /* 写入失败则仅本次会话生效 */ }
+}
+
+// 首次使用（config.json 不存在）时弹出语言选择；必须选择并确认才能进入
+function showLanguageModal() {
+  const modal = document.getElementById('lang-modal');
+  if (!modal) return;
+  const select = document.getElementById('modal-lang-select');
+  const confirm = document.getElementById('modal-lang-confirm');
+  modal.hidden = false;
+
+  confirm.addEventListener('click', async () => {
+    modal.hidden = true;
+    await changeLanguage((select && select.value) || DEFAULT_LANG);
+  }, { once: true });
 }
 
 function syncToolbar() {
@@ -242,41 +256,23 @@ async function pollRender(taskId, btn) {
   }
 }
 
-// 首次使用（config.json 不存在）时弹出语言选择；必须点击其一才能进入
-function showLanguageModal() {
-  const modal = document.getElementById('lang-modal');
-  if (!modal) return;
-  modal.hidden = false;
-
-  const choose = async (code) => {
-    modal.hidden = true;
-    await setLanguage(code);
-    emit();
-    refreshSceneList();
-    try {
-      await API.saveConfig({ language: code });
-    } catch (err) { /* 保存失败则仅本次会话生效 */ }
-  };
-
-  document.getElementById('modal-lang-en').addEventListener('click', () => choose('en_us'), { once: true });
-  document.getElementById('modal-lang-zh').addEventListener('click', () => choose('zh_cn'), { once: true });
-}
-
 async function init() {
   bindToolbar();
   bindTabs();
   bindLibrary();
   bindCanvas();
 
-  // 语言：读取 config.json；读取失败时回退英文
-  let lang = 'en_us';
+  // 语言：加载语言清单与默认语言包
+  await bootstrapI18n();
+
+  let lang = DEFAULT_LANG;
   let configured = true;
   try {
     const config = await API.getConfig();
-    if (config && config.language === 'zh_cn') lang = 'zh_cn';
+    if (config && config.language) lang = config.language;
     configured = !!(config && config.configured);
   } catch (err) {
-    lang = 'en_us'; // 后端不可用时保持英文，也不弹窗（此时选择无法持久化）
+    lang = DEFAULT_LANG; // 后端不可用时保持默认语言，也不弹窗（此时选择无法持久化）
   }
   await setLanguage(lang);
 
