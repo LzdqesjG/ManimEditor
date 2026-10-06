@@ -47,6 +47,44 @@ SUPPORTED_LANGUAGES = _load_supported_languages()
 DEFAULT_LANGUAGE = "en_us"
 
 
+# ------------------------------------------------------------------ 应用配置
+
+
+def _read_config_file() -> dict:
+    """读取 config.json 原始内容，失败时返回空字典。"""
+    try:
+        data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _write_config_file(data: dict) -> None:
+    CONFIG_FILE.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
+def _sync_python_executable() -> None:
+    """把当前运行的 Python 解释器路径写入 config.json，供更新后重启 main.py 使用。
+
+    换了解释器 / 虚拟环境时自动覆盖。这样"依赖只装在虚拟环境里"也能放心更新重启。
+    """
+    current = sys.executable or ""
+    if not current:
+        return
+    data = _read_config_file()
+    if data.get("python_executable") == current:
+        return
+    data["python_executable"] = current
+    try:
+        _write_config_file(data)
+        print(f"[config] 已记录解释器路径：{current}", flush=True)
+    except Exception as exc:
+        print(f"[config] 写入解释器路径失败：{exc}", flush=True)
+
+
 # ------------------------------------------------------------------ 自更新
 
 _update_state: dict = {
@@ -106,6 +144,7 @@ def _update_result_file() -> Path:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    _sync_python_executable()
     checker = threading.Thread(target=_run_update_check, daemon=True)
     checker.start()
     yield
@@ -134,27 +173,32 @@ def api_catalog() -> dict:
 def api_get_config() -> dict:
     """读取 config.json 中的应用配置。
 
-    configured 表示配置文件是否存在且有效：为 False 时前端会弹出首次使用的语言选择。
-    文件缺失或读取失败时回退为默认语言。
+    configured 表示用户**是否已选择过语言**：为 False 时前端会弹出首次使用的语言选择。
+    注意不能只看文件是否存在——后端启动时会把解释器路径写进同一个文件。
     """
-    try:
-        data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
-        if isinstance(data, dict) and data.get("language") in SUPPORTED_LANGUAGES:
-            return {"language": data["language"], "configured": True}
-    except Exception:
-        pass
-    return {"language": DEFAULT_LANGUAGE, "configured": False}
+    data = _read_config_file()
+    language = data.get("language")
+    configured = language in SUPPORTED_LANGUAGES
+    return {
+        "language": language if configured else DEFAULT_LANGUAGE,
+        "configured": configured,
+        "python_executable": data.get("python_executable", ""),
+    }
 
 
 @app.post("/api/config")
 def api_set_config(payload: AppConfig) -> dict:
-    """把应用配置写入 config.json。"""
-    language = payload.language if payload.language in SUPPORTED_LANGUAGES else DEFAULT_LANGUAGE
-    CONFIG_FILE.write_text(
-        json.dumps({"language": language}, ensure_ascii=False, indent=2),
-        encoding="utf-8",
+    """把应用配置写入 config.json，保留后端记录的解释器路径。"""
+    data = _read_config_file()
+    data["language"] = (
+        payload.language if payload.language in SUPPORTED_LANGUAGES else DEFAULT_LANGUAGE
     )
-    return {"language": language}
+    if payload.python_executable:
+        data["python_executable"] = payload.python_executable
+    elif not data.get("python_executable"):
+        data["python_executable"] = sys.executable or ""
+    _write_config_file(data)
+    return {"language": data["language"]}
 
 
 @app.get("/api/update/status")

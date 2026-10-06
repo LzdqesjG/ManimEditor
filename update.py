@@ -25,6 +25,7 @@ import sys
 import time
 import urllib.request
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 # 判定"更新内容根目录"的标志物
@@ -35,6 +36,8 @@ REQUIRED_MARKERS = ("main.py", "backend", "frontend")
 PRESERVE_TOP = {".venv", "venv", ".git", "tmp", "rollback"}
 
 NETWORK_TIMEOUT = 30
+# 单个地址的探测超时（只读首包，测出延迟即可）
+PROBE_TIMEOUT = 8
 TMP_DIR_NAME = "tmp"
 PKG_DIR_NAME = "pkg"
 RESULT_FILE_NAME = "update_done.json"
@@ -56,8 +59,11 @@ _log = _build_logger()
 
 
 def read_project_meta(root: Path) -> dict:
-    """读取 project.toml 中的 version / complete_time / 更新地址。"""
-    meta = {"version": "", "complete_time": 0.0, "primary_url": "", "backup_url": ""}
+    """读取 project.toml 中的 version / complete_time / 更新地址。
+
+    `backup` 既支持单个字符串，也支持字符串数组（多个镜像地址）。
+    """
+    meta = {"version": "", "complete_time": 0.0, "primary_url": "", "backup_urls": []}
     try:
         import tomllib
 
@@ -67,7 +73,15 @@ def read_project_meta(root: Path) -> dict:
         meta["version"] = str(data.get("version", "") or "")
         meta["complete_time"] = float(data.get("complete_time", 0) or 0)
         meta["primary_url"] = str(update_cfg.get("primary", "") or "")
-        meta["backup_url"] = str(update_cfg.get("backup", "") or "")
+
+        raw_backup = update_cfg.get("backup", "")
+        if isinstance(raw_backup, str):
+            candidates = [raw_backup]
+        elif isinstance(raw_backup, (list, tuple)):
+            candidates = [str(item) for item in raw_backup]
+        else:
+            candidates = []
+        meta["backup_urls"] = [item.strip() for item in candidates if item and item.strip()]
     except Exception as exc:
         _log.warning("读取 %s 失败：%s", Path(root) / "project.toml", exc)
     return meta
@@ -77,6 +91,30 @@ def download(url: str) -> bytes:
     request = urllib.request.Request(url, headers={"User-Agent": "ManimEditor-Updater"})
     with urllib.request.urlopen(request, timeout=NETWORK_TIMEOUT) as response:
         return response.read()
+
+
+def probe_latency(url: str) -> float | None:
+    """探测地址可用性并返回首包延迟（秒）；失败返回 None。"""
+    request = urllib.request.Request(url, headers={"User-Agent": "ManimEditor-Updater"})
+    start = time.perf_counter()
+    try:
+        with urllib.request.urlopen(request, timeout=PROBE_TIMEOUT) as response:
+            response.read(1024)  # 只取首包，测通即可
+        return time.perf_counter() - start
+    except Exception as exc:
+        _log.warning("探测失败：%s -> %s", url, exc)
+        return None
+
+
+def rank_update_urls(urls: list[str]) -> list[tuple[str, float | None]]:
+    """并发探测所有地址的延迟，按由快到慢排序（不可用的排在最后）。"""
+    if not urls:
+        return []
+    if len(urls) == 1:
+        return [(urls[0], probe_latency(urls[0]))]
+    with ThreadPoolExecutor(max_workers=len(urls)) as pool:
+        probes = list(pool.map(lambda url: (url, probe_latency(url)), urls))
+    return sorted(probes, key=lambda item: (item[1] is None, item[1] or 0.0))
 
 
 def find_update_root(base: Path) -> Path | None:
@@ -154,25 +192,39 @@ def check_for_update(project_root: Path) -> dict:
         local["complete_time"],
     )
 
-    urls = [u for u in (local["primary_url"], local["backup_url"]) if u]
-    _log.info("更新地址：primary=%r backup=%r", local["primary_url"], local["backup_url"])
-    if not urls:
+    candidates = ([local["primary_url"]] if local["primary_url"] else []) + list(
+        local["backup_urls"]
+    )
+    _log.info("更新地址：primary=%r backup=%r", local["primary_url"], local["backup_urls"])
+    if not candidates:
         state["error"] = "no update url configured"
         _log.error("project.toml 未配置任何更新地址")
         return state
 
+    _log.info("共 %d 个候选地址，开始并发探测延迟…", len(candidates))
+    ranked = rank_update_urls(candidates)
+    for index, (url, latency) in enumerate(ranked, 1):
+        _log.info(
+            "  延迟排名 %d：%s（%s）",
+            index,
+            url,
+            f"{latency * 1000:.0f} ms" if latency is not None else "不可用",
+        )
+
     blob = None
     errors = []
-    for index, url in enumerate(urls):
-        label = "主地址" if index == 0 else "备用地址"
-        _log.info("尝试下载（%s）：%s", label, url)
+    for url, latency in ranked:
+        if latency is None:
+            errors.append(f"{url}: probe failed")
+            continue
+        _log.info("尝试下载（延迟 %.0f ms）：%s", latency * 1000, url)
         try:
             blob = download(url)
-            _log.info("下载成功（%s）：%d 字节", label, len(blob))
+            _log.info("下载成功：%d 字节", len(blob))
             break
         except Exception as exc:
             errors.append(f"{url}: {exc}")
-            _log.warning("下载失败（%s）：%s", label, exc)
+            _log.warning("下载失败：%s", exc)
 
     if blob is None:
         state["error"] = "download failed -> " + " | ".join(errors)
@@ -293,16 +345,36 @@ def apply_update(project_root: Path, new_root: Path, old_version: str, result_fi
     _log.info("更新完成：新版本 %s", version)
 
 
+def resolve_python_executable(project_root: Path) -> str:
+    """优先使用 config.json 记录的、最初运行 main.py 的解释器。
+
+    这样即使更新进程由别的解释器拉起，也能回到原环境（依赖齐全）。
+    """
+    try:
+        data = json.loads((Path(project_root) / "config.json").read_text(encoding="utf-8"))
+        recorded = str(data.get("python_executable") or "")
+        if recorded and Path(recorded).exists():
+            _log.info("使用 config.json 记录的解释器：%s", recorded)
+            return recorded
+        if recorded:
+            _log.warning("config.json 记录的解释器不存在：%s，回退", recorded)
+    except Exception as exc:
+        _log.warning("读取 config.json 失败：%s", exc)
+    _log.info("回退到当前解释器：%s", sys.executable)
+    return sys.executable
+
+
 def launch_main(project_root: Path) -> None:
-    """以独立进程启动 main.py。"""
+    """以独立进程启动 main.py：工作目录为项目根，解释器为原先的解释器。"""
     flags = 0
     if sys.platform == "win32":
         flags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
     entry = Path(project_root) / "main.py"
-    _log.info("重新启动 main.py：%s（解释器 %s）", entry, sys.executable)
+    python = resolve_python_executable(project_root)
+    _log.info("重新启动 main.py：%s（cwd=%s，解释器 %s）", entry, project_root, python)
     try:
         subprocess.Popen(
-            [sys.executable, str(entry)],
+            [python, str(entry)],
             cwd=str(project_root),
             creationflags=flags,
             close_fds=True,

@@ -84,3 +84,5 @@ class AppConfig(BaseModel):
     """应用级配置（持久化到 config.json）。"""
 
     language: str = "en_us"
+    # 运行 main.py 所使用的 Python 解释器路径，由后端启动时自动写入（前端不传）
+    python_executable: str = ""
